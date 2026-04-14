@@ -1,7 +1,7 @@
 import json
 import time
 from confluent_kafka import Producer
-from app.config import settings
+from config import settings
 
 
 def delivery_report(err, msg):

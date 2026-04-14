@@ -1,7 +1,7 @@
 import json
 import time
 from confluent_kafka import Consumer, KafkaError, KafkaException
-from app.config import settings
+from config import settings
 
 
 def main():

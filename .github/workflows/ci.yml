@@ -1,0 +1,53 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Docker Images
+      run: docker compose build
+
+    - name: Start Services
+      run: docker compose up -d
+
+    - name: Wait for Kafka to be healthy
+      run: |
+        echo "Waiting for Kafka to become healthy..."
+        for i in {1..30}; do
+          STATUS=$(docker inspect --format='{{.State.Health.Status}}' kafka)
+          if [ "$STATUS" = "healthy" ]; then
+            echo "Kafka is healthy!"
+            exit 0
+          fi
+          echo "Current status: $STATUS. Retrying in 5s..."
+          sleep 5
+        done
+        echo "Kafka failed to become healthy in time."
+        docker compose logs kafka
+        exit 1
+
+    - name: Create Kafka Topic
+      run: |
+        docker exec kafka kafka-topics --bootstrap-server localhost:9092 --create --topic user-messages --partitions 1 --replication-factor 1 || echo "Topic might already exist"
+
+    - name: Run Producer
+      run: docker compose run --rm app python producer.py
+
+    - name: Verify Consumer Output
+      run: |
+        echo "Waiting for consumer to process messages..."
+        sleep 10
+        docker compose logs chat-app | grep "\[CHAT\]" || (echo "No chat messages found in logs!" && docker compose logs chat-app && exit 1)
+
+    - name: Cleanup
+      if: always()
+      run: docker compose down
