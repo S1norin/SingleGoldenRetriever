@@ -1,22 +1,14 @@
-import os
 import json
 import time
 from confluent_kafka import Consumer, KafkaError, KafkaException
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Configuration
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-CHAT_TOPIC = os.getenv("CHAT_TOPIC", "user-messages")
-GROUP_ID = "chat-consumer-group"
+from app.config import settings
 
 
 def main():
     # Consumer configuration
     conf = {
-        "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
-        "group.id": GROUP_ID,
+        "bootstrap.servers": settings.kafka_bootstrap_servers,
+        "group.id": settings.kafka_group_id,
         "auto.offset.reset": "earliest",
     }
 
@@ -25,8 +17,8 @@ def main():
 
     try:
         # Subscribe to topic
-        print(f"Subscribing to topic: {CHAT_TOPIC}")
-        consumer.subscribe([CHAT_TOPIC])
+        print(f"Subscribing to topic: {settings.kafka_topic}")
+        consumer.subscribe([settings.kafka_topic])
 
         print("Waiting for messages... (Ctrl+C to stop)")
 
@@ -41,7 +33,9 @@ def main():
                     # End of partition event
                     print(f"Reached end of partition {msg.partition()}")
                 elif msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
-                    print(f"Topic {CHAT_TOPIC} not found yet, retrying in 5s...")
+                    print(
+                        f"Topic {settings.kafka_topic} not found yet, retrying in 5s..."
+                    )
                     time.sleep(5)
                 else:
                     # If it's a real error that might be transient, log and continue

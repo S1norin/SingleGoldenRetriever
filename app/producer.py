@@ -1,14 +1,7 @@
-import os
 import json
 import time
 from confluent_kafka import Producer
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Configuration
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-CHAT_TOPIC = os.getenv("CHAT_TOPIC", "user-messages")
+from app.config import settings
 
 
 def delivery_report(err, msg):
@@ -22,14 +15,14 @@ def delivery_report(err, msg):
 def main():
     # Producer configuration
     conf = {
-        "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+        "bootstrap.servers": settings.kafka_bootstrap_servers,
     }
 
     # Create Producer instance
     producer = Producer(conf)
 
-    print(f"Starting Producer. Sending messages to topic: {CHAT_TOPIC}")
-    print(f"Broker: {KAFKA_BOOTSTRAP_SERVERS}")
+    print(f"Starting Producer. Sending messages to topic: {settings.kafka_topic}")
+    print(f"Broker: {settings.kafka_bootstrap_servers}")
 
     try:
         # Simulate chat messages
@@ -46,7 +39,7 @@ def main():
 
             # Produce message
             producer.produce(
-                CHAT_TOPIC, payload.encode("utf-8"), callback=delivery_report
+                settings.kafka_topic, payload.encode("utf-8"), callback=delivery_report
             )
 
             # Serve delivery callbacks from previous calls
