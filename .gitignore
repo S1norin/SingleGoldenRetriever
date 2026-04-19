@@ -1,2 +1,6 @@
 .env
 .ruff_cache
+dist/
+node_modules/
+build/
+frontend/frontend_readme.md
