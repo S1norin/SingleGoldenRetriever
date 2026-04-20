@@ -40,6 +40,20 @@ services:
       CHAT_TOPIC: 'user-messages'
     command: python consumer.py
 
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - app
+    networks:
+      - app-network
+
 volumes:
   kafka_data:
+
+networks:
+  app-network:
+    driver: bridge
 
