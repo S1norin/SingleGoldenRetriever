@@ -4,3 +4,4 @@ dist/
 node_modules/
 build/
 frontend/frontend_readme.md
+frontend/.env

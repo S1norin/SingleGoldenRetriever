@@ -1,10 +1,36 @@
-export const defaultCurrentUser = "Daria";
+// --- Frontend Configuration (single source of truth) ---
+// All values come from Vite env vars (prefixed with VITE_).
+// Edit frontend/.env or pass via docker-compose.yml build args.
 
-export const mockSubscribedTopics = [
-  "engineering",
-  "release_ops",
-  "product-updates",
-];
+const splitCsv = (value) =>
+  value
+    ?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean) ?? [];
+
+const config = {
+  defaultUsername: import.meta.env.VITE_DEFAULT_USERNAME ?? "Daria",
+  subscribedTopics: splitCsv(import.meta.env.VITE_SUBSCRIBED_TOPICS) ?? [
+    "engineering",
+    "release_ops",
+    "product-updates",
+  ],
+  onlineUsers: splitCsv(import.meta.env.VITE_ONLINE_USERS).map(
+    (username, index) => ({
+      id: `user-${index + 1}`,
+      username,
+      status: index % 3 === 2 ? "offline" : "online",
+    }),
+  ),
+  mockMessageCount:
+    parseInt(import.meta.env.VITE_MOCK_MESSAGE_COUNT, 10) || 4,
+};
+
+// --- Data ---
+
+export const defaultCurrentUser = config.defaultUsername;
+
+export const mockSubscribedTopics = config.subscribedTopics;
 
 export const mockMessages = [
   {
@@ -18,7 +44,13 @@ export const mockMessages = [
     id: "message-2",
     sender: "Noah",
     text: "Frontend build now groups single-topic traffic into channel views.",
-    targetTopics: ["engineering", "product-updates", "qa", "release_ops", "ui-lab"],
+    targetTopics: [
+      "engineering",
+      "product-updates",
+      "qa",
+      "release_ops",
+      "ui-lab",
+    ],
     createdAt: "2026-04-18T08:40:00.000Z",
   },
   {
@@ -35,12 +67,6 @@ export const mockMessages = [
     targetTopics: ["release_ops", "announcements", "leadership"],
     createdAt: "2026-04-18T07:45:00.000Z",
   },
-];
+].slice(0, config.mockMessageCount);
 
-export const mockOnlineUsers = [
-  { id: "user-1", username: "Ava", status: "online" },
-  { id: "user-2", username: "Noah", status: "online" },
-  { id: "user-3", username: "Lena", status: "offline" },
-  { id: "user-4", username: "Mateo", status: "online" },
-  { id: "user-5", username: "Daria", status: "online" },
-];
+export const mockOnlineUsers = config.onlineUsers;
