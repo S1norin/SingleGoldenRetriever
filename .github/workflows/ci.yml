@@ -46,7 +46,7 @@ jobs:
       run: |
         echo "Waiting for consumer to process messages..."
         sleep 10
-        docker compose logs chat-app | grep "\[CHAT\]" || (echo "No chat messages found in logs!" && docker compose logs chat-app && exit 1)
+        docker compose logs app | grep "\[CHAT\]" || (echo "No chat messages found in logs!" && docker compose logs app && exit 1)
 
     - name: Cleanup
       if: always()
