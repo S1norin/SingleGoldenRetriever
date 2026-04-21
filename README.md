@@ -6,7 +6,7 @@ A real-time messaging app that channels all messages through a **single Kafka to
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
-│   Frontend    │────▶│   Kafka Broker   │────▶│   Consumer   │
+│   Frontend    │────▶│   Kafka Broker   │────▶│ Consumer and Producer│
 │  (HTML/CSS/JS)│◀────│  (single topic)  │◀────│  (Python)    │
 │  localhost    │     │  user-messages   │     │  chat-app    │
 └──────────────┘     └──────────────────┘     └──────────────┘
@@ -58,7 +58,7 @@ Open **http://localhost:8000** in your browser (local dev) or configure a port m
 docker compose up kafka
 
 # 2. In another terminal, start the consumer
-cd app && python consumer.py
+cd app && python main.py
 
 # 3. In another terminal, start a local server for the frontend
 cd frontend && python -m http.server 8000
@@ -92,9 +92,8 @@ All configuration lives in `.env` files or Docker build args.
 
 ```
 ├── app/                    # Python backend
-│   ├── consumer.py         # Kafka consumer (prints messages)
-│   ├── producer.py         # Kafka producer (demo messages)
-│   ├── config.py           # Pydantic settings
+│   ├── main.py             # Kafka consumer and producer
+│   ├── README.md
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/               # Vanilla HTML/CSS/JS
