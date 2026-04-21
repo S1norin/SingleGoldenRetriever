@@ -1,110 +1,138 @@
-# Frontend — Single Kafka Messenger
+# Frontend
 
-React single-page application served by nginx. Built with Vite + Tailwind CSS.
+Static frontend for `SingleGoldenRetriever`.
 
-## Tech Stack
+This UI is built with plain `HTML`, `CSS`, and `JavaScript`. It does not require React, Vite, or any build step.
 
-| Tool | Version | Purpose |
-|---|---|---|
-| React | 18.3 | UI library |
-| Vite | 8.0 | Build tool & dev server |
-| Tailwind CSS | 3.4 | Utility-first CSS |
-| Nginx | Alpine | Production server (Docker) |
+## Files
 
-## Getting Started
+### Pages
+
+- `login.html` — Login page (username only). Redirects to `main.html` on sign-in.
+- `main.html` — Messenger page (feed, topics, composer, presence). Redirects to `login.html` if not authenticated.
+
+### Scripts
+
+- `config.js` — Central configuration. Toggle `useMockData` to switch between mock and real backend.
+- `utils.js` — Shared utility functions (`escapeHtml`, `formatTime`, `sanitizeTopicInput`, etc.).
+- `login.js` — Login form behavior (submit handling, localStorage redirect).
+- `main.js` — Messenger behavior: event handlers, DOM updates, state management, data loading.
+- `message.js` — Message detail overlay module (opens on click, shows flow path, topics, recipients).
+
+### Styles
+
+- `styles.css` — Layout and visual styles (dark theme, grid layout, components).
+
+## Features
+
+- **Login page** — Username-only authentication, stored in `localStorage`
+- **Topic subscription management** — Join/remove topics, filter feed by subscribed topics
+- **Message composer** — Select target topics, send messages (mock or real backend)
+- **Online users panel** — Presence tracking (mock or real backend via polling)
+- **Message detail overlay** — Click any message to see full details, flow path, and recipients
+- **Mobile drawer** — Panels accessible via hamburger menu on small screens
+- **Mock/Real toggle** — Change `Config.useMockData` in `config.js`
+
+## Layout
+
+- **Left:** subscribed topics (filter feed)
+- **Center:** message feed
+- **Right:** online users + producer (composer)
+- **Overlay:** message detail (flow path, recipients)
+- **Mobile:** hamburger menu opens drawer with panels
+
+## Run
+
+Open `login.html` in a browser.
+
+If you want a local server instead of opening the file directly, run one from the `frontend` directory:
 
 ```bash
-cd frontend
-npm install
-npm run dev        # Dev server at http://localhost:5173
-npm run build      # Production build → dist/
-npm run preview    # Preview production build
+python3 -m http.server 8000
 ```
 
-## Project Structure
-
-```
-frontend/
-├── App.jsx                  # Root component
-├── main.jsx                 # Entry point
-├── index.html               # HTML template
-├── index.css                # Tailwind + custom CSS vars
-├── mockData.js              # Mock data + env-based config
-├── components/              # React components
-│   ├── AuthPage.jsx         # Login screen
-│   ├── FlowMonitor.jsx      # Message flow visualization
-│   ├── LeftSidebar.jsx      # Topic subscriptions
-│   ├── MessageComposer.jsx  # Message input
-│   ├── MessageFeed.jsx      # Message list
-│   ├── MessageModal.jsx     # Message detail
-│   ├── MobileDrawer.jsx     # Mobile sidebar
-│   └── RightSidebar.jsx     # Online users
-├── utils/
-│   └── topicUtils.js        # Topic sanitization & formatting
-├── Dockerfile
-├── nginx.conf
-├── .env.example
-└── vite.config.js
-```
+Then open `http://localhost:8000/login.html`.
 
 ## Configuration
 
-All settings come from Vite environment variables (`VITE_*` prefix).
+Edit `config.js` to change behavior:
 
-### Environment Variables
+```javascript
+// Toggle between mock data and real backend
+useMockData: true,  // false = use real backend API
 
-| Variable | Default | Description |
-|---|---|---|
-| `VITE_DEFAULT_USERNAME` | `Daria` | Login page placeholder username |
-| `VITE_SUBSCRIBED_TOPICS` | `engineering,release_ops,product-updates` | Comma-separated list of pre-subscribed topics |
-| `VITE_ONLINE_USERS` | `Ava,Noah,Lena,Mateo,Daria` | Comma-separated list of mock online users |
-| `VITE_MOCK_MESSAGE_COUNT` | `4` | Number of initial mock messages |
+// Backend address (used when useMockData: false)
+backendUrl: "http://localhost:8000",
 
-### Setting Values
+// Polling interval for messages and presence (ms)
+pollIntervalMs: 3000,
 
-**Local development:** Copy `.env.example` → `.env` and edit values.
+// Default username (pre-filled on login)
+defaultUsername: "Daria",
 
-```bash
-cp .env.example .env
-# edit .env
-npm run dev
+// Default subscribed topics
+defaultTopics: ["engineering", "release_ops", "product-updates"],
 ```
 
-**Docker:** Pass as build args in `docker-compose.yml`:
+The config also includes `mockMessages` (4 seed messages), `mockUsers` (5 users with presence/topic subscriptions), and `Config.api` (endpoint paths for future backend integration).
 
-```yaml
-frontend:
-  build:
-    context: ./frontend
-    args:
-      VITE_DEFAULT_USERNAME: "Admin"
-      VITE_SUBSCRIBED_TOPICS: "general,alerts"
+### Mock Mode (default)
+
+Works without any backend server. Uses `Config.mockMessages` and `Config.mockUsers` as seed data.
+
+### Real Backend Mode (planned)
+
+Set `useMockData: false` and configure `backendUrl`. The frontend is designed to:
+
+1. `fetch(backendUrl + "/api/messages")` on page load
+2. `fetch(backendUrl + "/api/users")` on page load
+3. Poll both endpoints every `pollIntervalMs` milliseconds
+4. `POST(backendUrl + "/api/messages")` when sending a message
+
+**Note:** Real backend integration is defined in `Config.api` but not yet implemented in the frontend. The current code uses mock data exclusively.
+
+## Architecture
+
+**HTML files define structure. JS files handle behavior.**
+
+- Static HTML (forms, panels, layout) lives in `.html` files
+- Dynamic lists (messages, topics, users) are injected by JS into empty containers
+- Event delegation (`document.addEventListener`) handles clicks on dynamic elements
+- `data-role` attributes mark elements that JS queries or updates
+- `data-action` attributes mark interactive elements
+
+```
+login.html ──(submit)──→ localStorage.authUser ──(redirect)──→ main.html
+                                                                         │
+                                                                     message.js
+                                                                     (overlay)
 ```
 
-## Production Build
+- `config.js` loads first — defines `window.Config`
+- `utils.js` loads second — defines `window.Utils`
+- `message.js` loads third — defines `window.MessageDetail` (no dependencies on other modules)
+- `main.js` loads last — uses `Config`, `Utils`, and `MessageDetail`
 
-```bash
-npm run build
-```
+### State Management
 
-Output goes to `dist/`. The Docker image serves this directory via nginx with gzip compression and SPA routing support.
+- `main.js` uses a single `state` object that drives all renders via `fullRender()`
 
-## Components
+## Notes
 
-### AuthPage
-Simple username/password login screen. Accepts any credentials.
+- Authentication is frontend-only (localStorage). No server-side auth yet.
+- Message flow visualization is static (no animation) — shown in the message detail overlay.
+- Recipients are derived from user topic subscriptions.
 
-### FlowMonitor
-Visual pipeline showing message flow: `Producer → Single Kafka Topic → Consumer`. Updates in real-time as messages are sent.
+## Future Integration
 
-### LeftSidebar
-Topic management — join new topics, leave existing ones. Input is sanitized (lowercase, alphanumeric + hyphens/underscores only).
+To connect to a real backend:
 
-### MessageComposer
-Topic checkboxes + message input. SEND MESSAGE is disabled until at least one topic is selected and text is entered.
-
-### MessageFeed
-Chronological message list. Each card shows sender, target topics, and message text. Click to expand.
-
-### RightSidebar
-Displays mock user presence (online/offline).
+1. Build an HTTP API server (Flask/FastAPI) on top of Kafka
+2. Implement endpoints:
+   - `GET /api/messages` — list messages
+   - `GET /api/users` — list users with presence/topic subscriptions
+   - `POST /api/messages` — send a message
+   - `POST /api/topics/join` — subscribe to a topic
+   - `POST /api/topics/leave` — unsubscribe from a topic
+3. Set `useMockData: false` in `config.js`
+4. Optionally replace polling with WebSockets for real-time updates

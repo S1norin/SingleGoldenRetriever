@@ -7,16 +7,16 @@ A real-time messaging app that channels all messages through a **single Kafka to
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
 │   Frontend    │────▶│   Kafka Broker   │────▶│   Consumer   │
-│  (React/Vite) │◀────│  (single topic)  │◀────│  (Python)    │
-│  nginx:5173   │     │  user-messages   │     │  chat-app    │
+│  (HTML/CSS/JS)│◀────│  (single topic)  │◀────│  (Python)    │
+│  localhost    │     │  user-messages   │     │  chat-app    │
 └──────────────┘     └──────────────────┘     └──────────────┘
 ```
 
 ### How it works
 
-1. **Frontend** sends messages as JSON to the single `user-messages` Kafka topic. Messages include a `user`, `text`, and `targetTopics` array.
+1. **Frontend** sends messages as JSON to the single `user-messages` Kafka topic, tagging each with target topics (channels).
 2. **Consumer** (Python) reads messages from the topic and prints them to stdout — in a real deployment this would push to a WebSocket endpoint for live updates.
-3. **Frontend** displays messages in a live feed, filtered by the user's subscribed topics (client-side filtering).
+3. **Frontend** displays messages in a live feed, filtered by the user's subscribed topics.
 
 > **Note:** The frontend does not produce directly to Kafka in this demo — it simulates message production and displays messages from mock data. A real implementation would use a backend API to bridge the frontend and Kafka.
 
@@ -27,14 +27,14 @@ A real-time messaging app that channels all messages through a **single Kafka to
 - [x] Username + password login (password required but not validated — for demo purposes)
 - [x] Online/offline status of users (mock presence)
 - [x] Visual message flow monitor (producer → topic → consumer)
-- [x] All via a single-page web UI
+- [x] All via a simple web UI!
 
 ## Quick Start
 
 ### Prerequisites
 
 - [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
-- Node.js 20+ (for local frontend development)
+- Python 3.9+ (for local backend development)
 
 ### One-liner (Docker)
 
@@ -47,9 +47,9 @@ This starts:
 |---|---|---|
 | `kafka` | 9092 | Kafka broker |
 | `app` | — | Python consumer |
-| `frontend` | 5173 | React SPA (nginx) |
+| `frontend` | — | Vanilla HTML/CSS/JS (served by nginx) |
 
-Open **http://localhost:5173** in your browser.
+Open **http://localhost:8000** in your browser (local dev) or configure a port mapping in `docker-compose.yml`.
 
 ### Local Development
 
@@ -60,11 +60,11 @@ docker compose up kafka
 # 2. In another terminal, start the consumer
 cd app && python consumer.py
 
-# 3. In another terminal, start the frontend dev server
-cd frontend && npm install && npm run dev
+# 3. In another terminal, start a local server for the frontend
+cd frontend && python -m http.server 8000
 ```
 
-The frontend dev server runs on **http://localhost:5173**.
+The frontend dev server runs on **http://localhost:8000**.
 
 ## Configuration
 
@@ -79,11 +79,11 @@ All configuration lives in `.env` files or Docker build args.
 | `GROUP_ID` | `chat-consumer-group` | Consumer group ID |
 | `LOG_LEVEL` | `INFO` | Logging level |
 
-### Frontend `.env` (see `frontend/.env.example`)
+### Frontend (see `frontend/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_DEFAULT_USERNAME` | `Daria` | Login placeholder |
+| `VITE_DEFAULT_USERNAME` | `Maria` | Login placeholder |
 | `VITE_SUBSCRIBED_TOPICS` | `engineering,release_ops,product-updates` | Pre-subscribed topics |
 | `VITE_ONLINE_USERS` | `Ava,Noah,Lena,Mateo,Daria` | Mock online users |
 | `VITE_MOCK_MESSAGE_COUNT` | `4` | Initial messages count |
@@ -97,11 +97,11 @@ All configuration lives in `.env` files or Docker build args.
 │   ├── config.py           # Pydantic settings
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/               # React SPA
-│   ├── components/         # React components
-│   ├── utils/              # Utility functions
-│   ├── Dockerfile
-│   └── nginx.conf
+├── frontend/               # Vanilla HTML/CSS/JS
+│   ├── index.html          # Entry point
+│   ├── styles.css          # Design system (792 lines)
+│   ├── script.js           # State + rendering (940 lines)
+│   └── .env                # Frontend configuration
 ├── docker-compose.yml      # Orchestration
 ├── .env.example
 └── README.md
