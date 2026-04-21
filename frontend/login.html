@@ -7,7 +7,37 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="auth-shell">
+        <section class="auth-card">
+          <div class="auth-head">
+            <div class="brand-block">
+              <div class="subtitle">SingleGoldenRetriever</div>
+              <h1 class="brand-title">Sign in to the messenger</h1>
+              <div class="hint">One shared Kafka topic. Clean channel-style view.</div>
+            </div>
+          </div>
+          <form class="auth-body stack" data-form="auth">
+            <label class="field">
+              <span>Username</span>
+              <input
+                class="input"
+                type="text"
+                value="Daria"
+                data-role="auth-username"
+                autofocus
+              />
+            </label>
+            <p class="error hidden" data-role="auth-error"></p>
+            <div class="auth-actions">
+              <button class="button button--accent button--block" type="submit">
+                Sign In
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
     <script src="./config.js"></script>
     <script src="./utils.js"></script>
     <script src="./login.js"></script>

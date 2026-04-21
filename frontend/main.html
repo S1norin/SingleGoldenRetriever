@@ -7,7 +7,162 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Mobile topbar -->
+      <header class="topbar mobile-only">
+        <div class="brand-block">
+          <div class="subtitle">SingleGoldenRetriever</div>
+          <div class="brand-title">Messenger</div>
+        </div>
+        <div class="header-actions">
+          <button class="button" type="button" data-action="logout">Sign out</button>
+          <button class="button" type="button" data-action="open-panel" data-panel="left">Panels</button>
+          <button class="button" type="button" data-action="open-panel" data-panel="producer">Send</button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <!-- Left: Topics -->
+        <aside class="column layout-area--left desktop-only">
+          <section class="panel panel--topics">
+            <div class="panel-section stack">
+              <div class="panel-intro">
+                <div class="section-title">Subscribed Topics</div>
+                <div class="hint">Join channels and use them as the global feed filter.</div>
+              </div>
+              <form class="stack" data-form="join-topic">
+                <div class="split">
+                  <input class="input" type="text" placeholder="Enter topic name..." data-role="join-draft" />
+                  <button class="button button--accent" type="submit">Join</button>
+                </div>
+                <div class="meta">
+                  Sanitized: <span data-role="join-preview">topicname</span>
+                </div>
+                <p class="error hidden" data-role="join-error"></p>
+              </form>
+            </div>
+            <div class="panel-body panel-body--spread">
+              <div class="metric-box"><strong>3</strong> active topics</div>
+              <div class="list" data-role="topics-list"></div>
+              <div class="hint">Global feed filter.</div>
+            </div>
+          </section>
+        </aside>
+
+        <!-- Center: Feed -->
+        <main class="column layout-area--center">
+          <section class="panel">
+            <div class="topbar desktop-only">
+              <div class="brand-block">
+                <div class="subtitle">SingleGoldenRetriever</div>
+                <div class="brand-title">Single Kafka Messenger</div>
+                <div class="hint">Realtime flow, topic filters, one shared stream.</div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-box"><strong>User</strong> <span data-role="current-user"></span></div>
+                <div class="metric-box"><strong>Visible</strong> <span data-role="visible-count">0</span></div>
+                <div class="metric-box"><strong>Topics</strong> <span data-role="topic-count">0</span></div>
+                <button class="button" type="button" data-action="logout">Sign out</button>
+              </div>
+            </div>
+            <section class="feed" data-role="feed"></section>
+          </section>
+        </main>
+
+        <!-- Right: Presence + Producer -->
+        <aside class="column layout-area--right desktop-only">
+          <div class="right-stack">
+            <section class="panel panel--presence">
+              <div class="panel-section">
+                <div class="panel-intro">
+                  <div class="section-title">Online Now</div>
+                  <div class="hint">Presence is tracked separately from messages.</div>
+                </div>
+              </div>
+              <div class="panel-body panel-body--spread">
+                <div class="list" data-role="users-list"></div>
+                <div class="metric-box"><strong data-role="online-count">0</strong> online users</div>
+              </div>
+            </section>
+            <section class="panel panel--producer">
+              <div class="panel-body">
+                <form class="stack" data-form="composer">
+                  <div class="panel-intro">
+                    <div class="section-title">Producer</div>
+                    <div class="hint">Select target topics and send into the shared stream.</div>
+                  </div>
+                  <div class="checkbox-line producer-topics" data-role="producer-topics"></div>
+                  <textarea class="textarea" placeholder="Write a message..." data-role="composer-text"></textarea>
+                  <button class="button button--accent button--block" type="submit" data-role="send-button" disabled>Send Message</button>
+                </form>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Mobile drawer -->
+      <div class="drawer-layer mobile-only hidden" data-role="drawer">
+        <button class="drawer-overlay" type="button" data-action="close-panel"></button>
+        <aside class="drawer">
+          <div class="drawer-head">
+            <div class="section-title" data-role="drawer-title">Panels</div>
+            <button class="button" type="button" data-action="close-panel">Close</button>
+          </div>
+          <div class="drawer-body">
+            <!-- Topics + Presence panels (shown when "Panels" selected) -->
+            <div class="right-stack" data-role="drawer-panels">
+              <section class="panel">
+                <div class="panel-section stack">
+                  <div class="panel-intro">
+                    <div class="section-title">Subscribed Topics</div>
+                    <div class="hint">Join channels and use them as the global feed filter.</div>
+                  </div>
+                  <form class="stack" data-form="join-topic">
+                    <div class="split">
+                      <input class="input" type="text" placeholder="Enter topic name..." data-role="join-draft" />
+                      <button class="button button--accent" type="submit">Join</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="panel-body panel-body--spread">
+                  <div class="metric-box"><strong>3</strong> active topics</div>
+                  <div class="list" data-role="drawer-topics-list"></div>
+                </div>
+              </section>
+              <section class="panel panel--presence">
+                <div class="panel-section">
+                  <div class="panel-intro">
+                    <div class="section-title">Online Now</div>
+                    <div class="hint">Presence is tracked separately from messages.</div>
+                  </div>
+                </div>
+                <div class="panel-body panel-body--spread">
+                  <div class="list" data-role="drawer-users-list"></div>
+               <div class="metric-box"><strong data-role="online-count">0</strong> online users</div>
+                </div>
+              </section>
+            </div>
+            <!-- Producer panel (shown when "Send" selected) -->
+            <div class="right-stack hidden" data-role="drawer-producer">
+              <section class="panel panel--producer">
+                <div class="panel-body">
+                  <form class="stack" data-form="composer">
+                    <div class="panel-intro">
+                      <div class="section-title">Producer</div>
+                      <div class="hint">Select target topics and send into the shared stream.</div>
+                    </div>
+                    <div class="checkbox-line producer-topics" data-role="drawer-producer-topics"></div>
+                    <textarea class="textarea" placeholder="Write a message..." data-role="drawer-composer-text"></textarea>
+                    <button class="button button--accent button--block" type="submit" data-role="drawer-send-button" disabled>Send Message</button>
+                  </form>
+                </div>
+              </section>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
     <script src="./config.js"></script>
     <script src="./utils.js"></script>
     <script src="./message.js"></script>

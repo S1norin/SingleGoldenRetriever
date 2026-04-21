@@ -15,8 +15,8 @@ This UI is built with plain `HTML`, `CSS`, and `JavaScript`. It does not require
 
 - `config.js` — Central configuration. Toggle `useMockData` to switch between mock and real backend.
 - `utils.js` — Shared utility functions (`escapeHtml`, `formatTime`, `sanitizeTopicInput`, etc.).
-- `login.js` — Login form rendering, validation, and localStorage redirect.
-- `main.js` — Messenger UI: feed, topics, composer, presence panel, mobile drawer, async data loading.
+- `login.js` — Login form behavior (submit handling, localStorage redirect).
+- `main.js` — Messenger behavior: event handlers, DOM updates, state management, data loading.
 - `message.js` — Message detail overlay module (opens on click, shows flow path, topics, recipients).
 
 ### Styles
@@ -89,11 +89,19 @@ Set `useMockData: false` and configure `backendUrl`. The frontend will:
 
 ## Architecture
 
+**HTML files define structure. JS files handle behavior.**
+
+- Static HTML (forms, panels, layout) lives in `.html` files
+- Dynamic lists (messages, topics, users) are injected by JS into empty containers
+- Event delegation (`document.addEventListener`) handles clicks on dynamic elements
+- `data-role` attributes mark elements that JS queries or updates
+- `data-action` attributes mark interactive elements
+
 ```
 login.html ──(submit)──→ localStorage.authUser ──(redirect)──→ main.html
-                                                                        │
-                                                                    message.js
-                                                                    (overlay)
+                                                                         │
+                                                                     message.js
+                                                                     (overlay)
 ```
 
 - `config.js` loads first — defines `window.Config`

@@ -1,488 +1,305 @@
 // frontend/main.js
 (function () {
-  const app = document.getElementById("app");
-
   // ── State ─────────────────────────────────────────────────
   let state = {
     messages: [],
     users: [],
     subscribedTopics: [...Config.defaultTopics],
     selectedTopics: [...Config.defaultTopics],
-    joinDraft: "",
-    joinError: "",
-    composerText: "",
     mobilePanel: null,
   };
 
   // ── Auth Check ────────────────────────────────────────────
-  const authUser = localStorage.getItem("authUser");
-  if (!authUser) {
+  if (!localStorage.getItem("authUser")) {
     window.location.href = "login.html";
   }
 
-  // ── Data Loading ──────────────────────────────────────────
-  async function loadData() {
-    if (Config.useMockData) {
-      state.messages = [...Config.mockMessages];
-      state.users = [...Config.mockUsers];
-    } else {
-      try {
-        const [messagesRes, usersRes] = await Promise.all([
-          fetch(Config.backendUrl + Config.api.messages),
-          fetch(Config.backendUrl + Config.api.users),
-        ]);
-        state.messages = await messagesRes.json();
-        state.users = await usersRes.json();
-      } catch (e) {
-        console.error("Failed to load data:", e);
-      }
-    }
-  }
+  // ── DOM References ────────────────────────────────────────
+  const feed = document.querySelector("[data-role='feed']");
+  const topicsList = document.querySelector("[data-role='topics-list']");
+  const usersList = document.querySelector("[data-role='users-list']");
+  const producerTopics = document.querySelector("[data-role='producer-topics']");
+  const currentUserEl = document.querySelector("[data-role='current-user']");
+  const visibleCountEl = document.querySelector("[data-role='visible-count']");
+  const topicCountEl = document.querySelector("[data-role='topic-count']");
+  const drawer = document.querySelector("[data-role='drawer']");
+  const drawerTitle = document.querySelector("[data-role='drawer-title']");
+  const drawerPanels = document.querySelector("[data-role='drawer-panels']");
+  const drawerProducer = document.querySelector("[data-role='drawer-producer']");
+  const drawerTopicsList = document.querySelector("[data-role='drawer-topics-list']");
+  const drawerUsersList = document.querySelector("[data-role='drawer-users-list']");
+  const drawerProducerTopics = document.querySelector("[data-role='drawer-producer-topics']");
+  const drawerSendButton = document.querySelector("[data-role='drawer-send-button']");
+  const onlineCountEl = document.querySelector(".panel--presence .metric-box strong");
 
-  // ── Polling (when useMockData: false) ─────────────────────
-  let pollTimer = null;
-
-  function startPolling() {
-    pollTimer = setInterval(async () => {
-      if (!Config.useMockData) {
-        try {
-          const [messagesRes, usersRes] = await Promise.all([
-            fetch(Config.backendUrl + Config.api.messages),
-            fetch(Config.backendUrl + Config.api.users),
-          ]);
-          state.messages = await messagesRes.json();
-          state.users = await usersRes.json();
-        } catch (e) {
-          console.error("Polling failed:", e);
-        }
-      }
-    }, Config.pollIntervalMs);
-  }
-
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
-  }
-
-  // ── Render ────────────────────────────────────────────────
-  function render() {
-    app.innerHTML = `
-      <div class="app-shell">
-        <header class="topbar mobile-only">
-          <div class="brand-block">
-            <div class="subtitle">SingleGoldenRetriever</div>
-            <div class="brand-title">Messenger</div>
-          </div>
-          <div class="header-actions">
-            <button class="button" type="button" data-action="logout">Sign out</button>
-            <button class="button" type="button" data-action="open-panel" data-panel="left">Panels</button>
-            <button class="button" type="button" data-action="open-panel" data-panel="producer">Send</button>
-          </div>
-        </header>
-        <div class="layout">
-          <aside class="column layout-area--left desktop-only">
-            ${renderLeftSidebar("panel--topics")}
-          </aside>
-          <main class="column layout-area--center">
-            <section class="panel">
-              <div class="topbar desktop-only">
-                <div class="brand-block">
-                  <div class="subtitle">SingleGoldenRetriever</div>
-                  <div class="brand-title">Single Kafka Messenger</div>
-                  <div class="hint">Realtime flow, topic filters, one shared stream.</div>
-                </div>
-                <div class="metrics-row">
-                  <div class="metric-box"><strong>User</strong> ${Utils.escapeHtml(currentUser())}</div>
-                  <div class="metric-box"><strong>Visible</strong> ${visibleMessages().length}</div>
-                  <div class="metric-box"><strong>Topics</strong> ${state.subscribedTopics.length}</div>
-                  <button class="button" type="button" data-action="logout">Sign out</button>
-                </div>
-              </div>
-              <section class="feed">
-                ${renderMessageFeed()}
-              </section>
-            </section>
-          </main>
-          <aside class="column layout-area--right desktop-only">
-            <div class="right-stack">
-              ${renderRightSidebar("panel--presence")}
-              ${renderProducerPanel()}
-            </div>
-          </aside>
-        </div>
-        ${renderDrawer()}
-      </div>
-    `;
-  }
-
-  // ── Sub-renderers ─────────────────────────────────────────
-  function renderLeftSidebar(extraClass) {
-    const rows =
+  // ── Render Functions ──────────────────────────────────────
+  function renderTopics() {
+    topicsList.innerHTML =
       state.subscribedTopics.length > 0
         ? state.subscribedTopics
             .map(
-              (topic) => `
-                <div class="list-row">
-                  <span>${Utils.escapeHtml(topic)}</span>
-                  <button class="button" type="button" data-action="remove-topic" data-topic="${Utils.escapeHtml(topic)}">[x]</button>
-                </div>
-              `,
+              (t) => `
+              <div class="list-row">
+                <span>${Utils.escapeHtml(t)}</span>
+                <button class="button" type="button" data-action="remove-topic" data-topic="${Utils.escapeHtml(t)}">[x]</button>
+              </div>
+            `,
             )
             .join("")
         : `<div class="empty-box">No subscriptions yet.</div>`;
-
-    return `
-      <section class="panel ${extraClass}">
-        <div class="panel-section stack">
-          <div class="panel-intro">
-            <div class="section-title">Subscribed Topics</div>
-            <div class="hint">Join channels and use them as the global feed filter.</div>
-          </div>
-          <form class="stack" data-form="join-topic">
-            <div class="split">
-              <input class="input" type="text" value="${Utils.escapeHtml(state.joinDraft)}" placeholder="Enter topic name..." data-role="join-draft" />
-              <button class="button button--accent" type="submit">Join</button>
-            </div>
-            <div class="meta">
-              Sanitized: <span data-role="join-preview">${Utils.escapeHtml(sanitizeTopicPreview(state.joinDraft) || "topicname")}</span>
-            </div>
-            <p class="error ${state.joinError ? "" : "hidden"}" data-role="join-error">${Utils.escapeHtml(state.joinError)}</p>
-          </form>
-        </div>
-        <div class="panel-body panel-body--spread">
-          <div class="metric-box"><strong>${state.subscribedTopics.length}</strong> active topics</div>
-          <div class="list">${rows}</div>
-          <div class="hint">Global feed filter.</div>
-        </div>
-      </section>
-    `;
+    topicCountEl.textContent = state.subscribedTopics.length;
+    const drawerTopics = document.querySelector("[data-role='drawer-topics-list']");
+    if (drawerTopics) drawerTopics.innerHTML = topicsList.innerHTML;
   }
 
-  function renderRightSidebar(extraClass) {
-    return `
-      <section class="panel ${extraClass}">
-        <div class="panel-section">
-          <div class="panel-intro">
-            <div class="section-title">Online Now</div>
-            <div class="hint">Presence is tracked separately from messages.</div>
-          </div>
-        </div>
-        <div class="panel-body panel-body--spread">
-          <div class="list">
-            ${state.users.map(renderUserRow).join("")}
-          </div>
-          <div class="metric-box"><strong>${Utils.onlineUsersCount(state.users)}</strong> online users</div>
-        </div>
-      </section>
-    `;
-  }
-
-  function renderUserRow(user) {
-    const online = user.status === "online";
-    return `
-      <div class="list-row">
-        <span>
-          <span class="presence-dot ${online ? "presence-dot--online" : ""}"></span>
-          ${Utils.escapeHtml(user.username)}
-        </span>
-        <span class="meta">${Utils.escapeHtml(user.status)}</span>
-      </div>
-    `;
-  }
-
-  function renderProducerPanel() {
-    return `
-      <section class="panel panel--producer">
-        <div class="panel-body">
-          ${renderComposer()}
-        </div>
-      </section>
-    `;
-  }
-
-  function renderComposer() {
-    const checkboxes =
-      state.subscribedTopics.length > 0
-        ? state.subscribedTopics
-            .map(
-              (topic) => `
-                <label class="checkbox-item">
-                  <input type="checkbox" ${state.selectedTopics.includes(topic) ? "checked" : ""} data-role="topic-checkbox" data-topic="${Utils.escapeHtml(topic)}" />
-                  <span>${Utils.escapeHtml(topic)}</span>
-                </label>
-              `,
-            )
-            .join("")
-        : `<span class="meta">Join a topic to enable sending.</span>`;
-
-    const disabled =
-      !state.composerText.trim() || state.selectedTopics.length === 0;
-
-    return `
-      <form class="stack" data-form="composer">
-        <div class="panel-intro">
-          <div class="section-title">Producer</div>
-          <div class="hint">Select target topics and send into the shared stream.</div>
-        </div>
-        <div class="checkbox-line producer-topics">${checkboxes}</div>
-        <textarea class="textarea" placeholder="Write a message..." data-role="composer-text">${Utils.escapeHtml(state.composerText)}</textarea>
-        <button class="button button--accent button--block" type="submit" data-role="send-button" ${disabled ? "disabled" : ""}>
-          Send Message
-        </button>
-      </form>
-    `;
-  }
-
-  function renderDrawer() {
-    if (!state.mobilePanel) return "";
-
-    const title = state.mobilePanel === "producer" ? "Producer" : "Panels";
-    const body =
-      state.mobilePanel === "producer"
-        ? renderProducerPanel()
-        : `
-          <div class="right-stack">
-            ${renderLeftSidebar("")}
-            ${renderRightSidebar("")}
+  function renderUsers() {
+    usersList.innerHTML = state.users
+      .map((u) => {
+        const online = u.status === "online";
+        return `
+          <div class="list-row">
+            <span>
+              <span class="presence-dot ${online ? "presence-dot--online" : ""}"></span>
+              ${Utils.escapeHtml(u.username)}
+            </span>
+            <span class="meta">${Utils.escapeHtml(u.status)}</span>
           </div>
         `;
-
-    return `
-      <div class="drawer-layer mobile-only">
-        <button class="drawer-overlay" type="button" data-action="close-panel"></button>
-        <aside class="drawer">
-          <div class="drawer-head">
-            <div class="section-title">${title}</div>
-            <button class="button" type="button" data-action="close-panel">Close</button>
-          </div>
-          <div class="drawer-body">${body}</div>
-        </aside>
-      </div>
-    `;
+      })
+      .join("");
+    document.querySelectorAll("[data-role='online-count']").forEach((el) => {
+      el.textContent = Utils.onlineUsersCount(state.users);
+    });
   }
 
-  function renderMessageFeed() {
-    const messages = visibleMessages();
+  function renderFeed() {
+    const visible = state.messages.filter((m) =>
+      m.targetTopics.some((t) => state.subscribedTopics.includes(t)),
+    );
+    visibleCountEl.textContent = visible.length;
 
-    if (messages.length === 0) {
-      return `<div class="feed-stack"><div class="empty-box">No messages match the current subscription filter.</div></div>`;
+    if (visible.length === 0) {
+      feed.innerHTML = `<div class="empty-box">No messages match the current subscription filter.</div>`;
+      return;
     }
 
-    return `
+    feed.innerHTML = `
       <div class="feed-stack">
         <div class="metric-box"><strong>Filtered for</strong> ${Utils.escapeHtml(currentUser())}</div>
-        ${messages.map(renderMessageCard).join("")}
+        ${visible.map(renderMessageCard).join("")}
       </div>
     `;
   }
 
-  function renderMessageCard(message) {
-    const preview = Utils.formatTopicPreview(message.targetTopics);
-    const topicBadges = message.targetTopics
-      .map((topic) => `<span class="topic-badge">${Utils.escapeHtml(topic)}</span>`)
+  function renderMessageCard(msg) {
+    const preview = Utils.formatTopicPreview(msg.targetTopics);
+    const badges = msg.targetTopics
+      .map((t) => `<span class="topic-badge">${Utils.escapeHtml(t)}</span>`)
       .join("");
-
     return `
-      <button class="message-card" type="button" data-action="open-message" data-message-id="${message.id}">
+      <button class="message-card" type="button" data-action="open-message" data-message-id="${msg.id}">
         <div class="message-head">
           <div class="message-author">
-            <div class="message-name">${Utils.escapeHtml(message.sender)}</div>
+            <div class="message-name">${Utils.escapeHtml(msg.sender)}</div>
             <div class="hint">User message</div>
           </div>
-          <div class="message-time hint">${Utils.formatTime(message.createdAt)}</div>
+          <div class="message-time hint">${Utils.formatTime(msg.createdAt)}</div>
         </div>
-        <div class="topic-badges">${topicBadges}</div>
+        <div class="topic-badges">${badges}</div>
         <p class="message-line"><strong>To:</strong> ${preview}</p>
-        <p class="message-line">${Utils.escapeHtml(message.text)}</p>
+        <p class="message-line">${Utils.escapeHtml(msg.text)}</p>
       </button>
     `;
   }
 
-  // ── Event Handlers ────────────────────────────────────────
-  app.addEventListener("click", (event) => {
-    const actionTarget = event.target.closest("[data-action]");
-    if (!actionTarget) return;
+  function renderProducerCheckboxes() {
+    producerTopics.innerHTML =
+      state.subscribedTopics.length > 0
+        ? state.subscribedTopics
+            .map(
+              (t) => `
+              <label class="checkbox-item">
+                <input type="checkbox" ${state.selectedTopics.includes(t) ? "checked" : ""} data-role="topic-checkbox" data-topic="${Utils.escapeHtml(t)}" />
+                <span>${Utils.escapeHtml(t)}</span>
+              </label>
+            `,
+            )
+            .join("")
+        : `<span class="meta">Join a topic to enable sending.</span>`;
+  }
 
-    const { action, topic, panel } = actionTarget.dataset;
+  function renderDrawer() {
+    if (!state.mobilePanel) {
+      drawer.classList.add("hidden");
+      return;
+    }
+    drawer.classList.remove("hidden");
+    drawerTitle.textContent =
+      state.mobilePanel === "producer" ? "Producer" : "Panels";
+    drawerPanels.classList.toggle("hidden", state.mobilePanel !== "left");
+    drawerProducer.classList.toggle("hidden", state.mobilePanel !== "producer");
+
+    // Populate drawer lists from main page (HTML strings, event delegation handles clicks)
+    drawerTopicsList.innerHTML = topicsList.innerHTML;
+    drawerUsersList.innerHTML = usersList.innerHTML;
+    drawerProducerTopics.innerHTML = producerTopics.innerHTML;
+
+    // Sync send button disabled state
+    drawerSendButton.disabled = state.selectedTopics.length === 0;
+  }
+
+  function fullRender() {
+    currentUserEl.textContent = currentUser();
+    renderTopics();
+    renderUsers();
+    renderFeed();
+    renderProducerCheckboxes();
+    renderDrawer();
+  }
+
+  // ── Event Handlers ────────────────────────────────────────
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+
+    const { action, topic, panel } = btn.dataset;
 
     if (action === "logout") {
-      logout();
-      return;
+      localStorage.removeItem("authUser");
+      window.location.href = "login.html";
     }
 
     if (action === "open-panel") {
       state.mobilePanel = panel;
-      render();
-      return;
+      renderDrawer();
     }
 
     if (action === "close-panel") {
       state.mobilePanel = null;
-      render();
-      return;
+      renderDrawer();
     }
 
     if (action === "remove-topic") {
-      state.subscribedTopics = state.subscribedTopics.filter(
-        (item) => item !== topic,
-      );
-      state.selectedTopics = state.selectedTopics.filter(
-        (item) => item !== topic,
-      );
-      render();
-      return;
+      state.subscribedTopics = state.subscribedTopics.filter((t) => t !== topic);
+      state.selectedTopics = state.selectedTopics.filter((t) => t !== topic);
+      fullRender();
     }
 
     if (action === "open-message") {
-      const messageId = actionTarget.dataset.messageId;
-      MessageDetail.open(messageId, state.messages, state.users);
-      return;
+      MessageDetail.open(btn.dataset.messageId, state.messages, state.users);
     }
   });
 
-  app.addEventListener("submit", (event) => {
-    const form = event.target;
-    event.preventDefault();
+  document.addEventListener("submit", (e) => {
+    const form = e.target;
+    if (!form.dataset.form) return;
+    e.preventDefault();
 
     if (form.dataset.form === "join-topic") {
-      const sanitized = sanitizeTopicPreview(state.joinDraft);
+      const draftInput = form.querySelector("[data-role='join-draft']");
+      const previewSpan = form.querySelector("[data-role='join-preview']");
+      const errorEl = form.querySelector("[data-role='join-error']");
+      const sanitized = draftInput.value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "");
+
       if (!sanitized) {
-        state.joinError = "Use letters, numbers, hyphens, or underscores.";
-        render();
+        errorEl.textContent = "Use letters, numbers, hyphens, or underscores.";
+        errorEl.classList.remove("hidden");
         return;
       }
       if (state.subscribedTopics.includes(sanitized)) {
-        state.joinError = "Already subscribed.";
-        render();
+        errorEl.textContent = "Already subscribed.";
+        errorEl.classList.remove("hidden");
         return;
       }
+
       state.subscribedTopics.push(sanitized);
       state.selectedTopics.push(sanitized);
-      state.joinDraft = "";
-      state.joinError = "";
+      draftInput.value = "";
+      errorEl.textContent = "";
+      errorEl.classList.add("hidden");
       state.mobilePanel = null;
-      render();
+      fullRender();
       return;
     }
 
     if (form.dataset.form === "composer") {
-      const text = state.composerText.trim();
-      if (!text || state.selectedTopics.length === 0) {
-        render();
-        return;
-      }
+      const textarea = form.querySelector(
+        "[data-role='composer-text'], [data-role='drawer-composer-text']",
+      );
+      const text = textarea.value.trim();
+      if (!text || state.selectedTopics.length === 0) return;
 
-      const message = {
+      const msg = {
         id: `message-${Date.now()}`,
         sender: currentUser(),
         text,
         targetTopics: [...state.selectedTopics],
         createdAt: new Date().toISOString(),
       };
-
-      state.messages.unshift(message);
-
-      // Send to real backend if not using mock data
-      if (!Config.useMockData) {
-        fetch(Config.backendUrl + Config.api.send, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user: message.sender,
-            text: message.text,
-            targetTopics: message.targetTopics,
-          }),
-        }).catch((e) => console.error("Failed to send message:", e));
-      }
-
-      state.composerText = "";
-      render();
+      state.messages.unshift(msg);
+      textarea.value = "";
+      fullRender();
     }
   });
 
-  app.addEventListener("input", (event) => {
-    const role = event.target.dataset.role;
-
-    if (role === "join-draft") {
-      state.joinDraft = event.target.value;
-      state.joinError = "";
-      const preview = app.querySelector("[data-role='join-preview']");
-      const error = app.querySelector("[data-role='join-error']");
-      if (preview) {
-        preview.textContent = sanitizeTopicPreview(state.joinDraft) || "topicname";
-      }
-      if (error) {
-        error.textContent = "";
-        error.classList.add("hidden");
-      }
-      return;
+  document.addEventListener("input", (e) => {
+    if (e.target.dataset.role === "join-draft") {
+      const form = e.target.closest("form");
+      const previewSpan = form.querySelector("[data-role='join-preview']");
+      const errorEl = form.querySelector("[data-role='join-error']");
+      const sanitized = e.target.value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "");
+      previewSpan.textContent = sanitized || "topicname";
+      errorEl.textContent = "";
+      errorEl.classList.add("hidden");
     }
 
-    if (role === "composer-text") {
-      state.composerText = event.target.value;
-      const sendButton = app.querySelector("[data-role='send-button']");
-      if (sendButton) {
-        sendButton.disabled =
-          !state.composerText.trim() || state.selectedTopics.length === 0;
-      }
+    if (
+      e.target.dataset.role === "composer-text" ||
+      e.target.dataset.role === "drawer-composer-text"
+    ) {
+      const form = e.target.closest("form");
+      const sendBtn = form.querySelector(
+        "[data-role='send-button'], [data-role='drawer-send-button']",
+      );
+      sendBtn.disabled =
+        !e.target.value.trim() || state.selectedTopics.length === 0;
     }
   });
 
-  app.addEventListener("change", (event) => {
-    if (event.target.dataset.role !== "topic-checkbox") return;
-
-    const topic = event.target.dataset.topic;
-    if (event.target.checked) {
+  document.addEventListener("change", (e) => {
+    if (e.target.dataset.role !== "topic-checkbox") return;
+    const topic = e.target.dataset.topic;
+    if (e.target.checked) {
       if (!state.selectedTopics.includes(topic)) {
         state.selectedTopics.push(topic);
       }
     } else {
-      state.selectedTopics = state.selectedTopics.filter(
-        (item) => item !== topic,
-      );
+      state.selectedTopics = state.selectedTopics.filter((t) => t !== topic);
     }
-    render();
+    fullRender();
   });
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
       state.mobilePanel = null;
       MessageDetail.close();
-      render();
+      renderDrawer();
     }
   });
 
-  // ── Business Logic ────────────────────────────────────────
-  function visibleMessages() {
-    return state.messages.filter((message) =>
-      message.targetTopics.some((topic) =>
-        state.subscribedTopics.includes(topic),
-      ),
-    );
-  }
-
+  // ── Utilities ─────────────────────────────────────────────
   function currentUser() {
     return localStorage.getItem("authUser") || Config.defaultUsername;
   }
 
-  function sanitizeTopicPreview(value) {
-    return value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-  }
-
-  function onlineUsersCount() {
-    return Utils.onlineUsersCount(state.users);
-  }
-
-  function logout() {
-    localStorage.removeItem("authUser");
-    stopPolling();
-    MessageDetail.close();
-    window.location.href = "login.html";
-  }
-
   // ── Init ──────────────────────────────────────────────────
-  loadData().then(render);
-  if (!Config.useMockData) startPolling();
+  state.messages = [...Config.mockMessages];
+  state.users = [...Config.mockUsers];
+  fullRender();
 })();
