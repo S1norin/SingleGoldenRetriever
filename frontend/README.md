@@ -74,18 +74,22 @@ defaultUsername: "Daria",
 defaultTopics: ["engineering", "release_ops", "product-updates"],
 ```
 
+The config also includes `mockMessages` (4 seed messages), `mockUsers` (5 users with presence/topic subscriptions), and `Config.api` (endpoint paths for future backend integration).
+
 ### Mock Mode (default)
 
 Works without any backend server. Uses `Config.mockMessages` and `Config.mockUsers` as seed data.
 
-### Real Backend Mode
+### Real Backend Mode (planned)
 
-Set `useMockData: false` and configure `backendUrl`. The frontend will:
+Set `useMockData: false` and configure `backendUrl`. The frontend is designed to:
 
 1. `fetch(backendUrl + "/api/messages")` on page load
 2. `fetch(backendUrl + "/api/users")` on page load
 3. Poll both endpoints every `pollIntervalMs` milliseconds
 4. `POST(backendUrl + "/api/messages")` when sending a message
+
+**Note:** Real backend integration is defined in `Config.api` but not yet implemented in the frontend. The current code uses mock data exclusively.
 
 ## Architecture
 
@@ -109,6 +113,10 @@ login.html ──(submit)──→ localStorage.authUser ──(redirect)──�
 - `message.js` loads third — defines `window.MessageDetail` (no dependencies on other modules)
 - `main.js` loads last — uses `Config`, `Utils`, and `MessageDetail`
 
+### State Management
+
+- `main.js` uses a single `state` object that drives all renders via `fullRender()`
+
 ## Notes
 
 - Authentication is frontend-only (localStorage). No server-side auth yet.
@@ -120,6 +128,11 @@ login.html ──(submit)──→ localStorage.authUser ──(redirect)──�
 To connect to a real backend:
 
 1. Build an HTTP API server (Flask/FastAPI) on top of Kafka
-2. Implement endpoints: `GET /api/messages`, `GET /api/users`, `POST /api/messages`
+2. Implement endpoints:
+   - `GET /api/messages` — list messages
+   - `GET /api/users` — list users with presence/topic subscriptions
+   - `POST /api/messages` — send a message
+   - `POST /api/topics/join` — subscribe to a topic
+   - `POST /api/topics/leave` — unsubscribe from a topic
 3. Set `useMockData: false` in `config.js`
 4. Optionally replace polling with WebSockets for real-time updates
