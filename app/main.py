@@ -46,6 +46,31 @@ def safe_topic(tag: str) -> str:
 active_topics = ["Heartbeat"]
 subscription_changed = False
 
+producer = Producer({
+    "bootstrap.servers": KAFKA_BROKER,
+    "log_level": 3
+})
+
+@app.post("/api/send")
+def send_message(payload: MessagePayload):
+    msg_data = {
+        "user": payload.user,
+        "text": payload.text,
+        "tags": payload.tags,
+        "time_of_send": datetime.utcnow().isoformat(),
+        "message_flow": ["Producer_Sent", "Kafka_General_Received"]
+    }
+    producer.produce("General", json.dumps(msg_data).encode("utf-8"))
+    producer.flush()
+    return {"status": "sent"}
+
+@app.post("/api/heartbeat")
+def send_heartbeat(payload: HeartbeatPayload):
+    hb_data = {"user": payload.user, "timestamp": time.time()}
+    producer.produce("Heartbeat", json.dumps(hb_data).encode("utf-8"))
+    producer.flush()
+    return {"status": "alive"}
+    
 @app.post("/api/subscribe")
 def update_subscription(payload: SubscribePayload):
     global active_topics, subscription_changed
