@@ -8,7 +8,7 @@ A real-time messaging app that channels all messages through a **single Kafka to
 ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
 │   Frontend    │────▶│   Kafka Broker   │────▶│   Consumer   │
 │  (HTML/CSS/JS)│◀────│  (single topic)  │◀────│  (Python)    │
-│  nginx:5173   │     │  user-messages   │     │  chat-app    │
+│  localhost    │     │  user-messages   │     │  chat-app    │
 └──────────────┘     └──────────────────┘     └──────────────┘
 ```
 
@@ -47,9 +47,9 @@ This starts:
 |---|---|---|
 | `kafka` | 9092 | Kafka broker |
 | `app` | — | Python consumer |
-| `frontend` | 5173 | Static SPA (nginx) |
+| `frontend` | — | Vanilla HTML/CSS/JS (served by nginx) |
 
-Open **http://localhost:5173** in your browser.
+Open **http://localhost:8000** in your browser (local dev) or configure a port mapping in `docker-compose.yml`.
 
 ### Local Development
 
@@ -79,11 +79,11 @@ All configuration lives in `.env` files or Docker build args.
 | `GROUP_ID` | `chat-consumer-group` | Consumer group ID |
 | `LOG_LEVEL` | `INFO` | Logging level |
 
-### Frontend (see `frontend/.env.example`)
+### Frontend (see `frontend/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_DEFAULT_USERNAME` | `Daria` | Login placeholder |
+| `VITE_DEFAULT_USERNAME` | `Maria` | Login placeholder |
 | `VITE_SUBSCRIBED_TOPICS` | `engineering,release_ops,product-updates` | Pre-subscribed topics |
 | `VITE_ONLINE_USERS` | `Ava,Noah,Lena,Mateo,Daria` | Mock online users |
 | `VITE_MOCK_MESSAGE_COUNT` | `4` | Initial messages count |
@@ -97,13 +97,11 @@ All configuration lives in `.env` files or Docker build args.
 │   ├── config.py           # Pydantic settings
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/               # Static SPA
+├── frontend/               # Vanilla HTML/CSS/JS
 │   ├── index.html          # Entry point
 │   ├── styles.css          # Design system (792 lines)
 │   ├── script.js           # State + rendering (940 lines)
-│   ├── Dockerfile          # Multi-stage nginx build
-│   ├── nginx.conf          # SPA routing + gzip
-│   └── .env.example
+│   └── .env                # Frontend configuration
 ├── docker-compose.yml      # Orchestration
 ├── .env.example
 └── README.md
