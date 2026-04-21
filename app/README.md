@@ -15,10 +15,9 @@ Python backend for reading from and writing to a single Kafka topic. Uses the Co
 
 ```
 app/
-├── config.py      # Pydantic Settings — reads .env / env vars
-├── consumer.py    # Kafka consumer — subscribes to topic, prints messages
-├── producer.py    # Kafka producer — demo script, sends sample messages
+├── main.py    # Kafka consumer and producer 
 ├── requirements.txt
+├── README.md
 └── Dockerfile
 ```
 
@@ -53,7 +52,7 @@ pip install -r requirements.txt
 ### Run Consumer
 
 ```bash
-python consumer.py
+python main.py
 ```
 
 Subscribes to the configured topic and prints received messages in the format:
@@ -65,7 +64,7 @@ Subscribes to the configured topic and prints received messages in the format:
 ### Run Producer (demo)
 
 ```bash
-python producer.py
+python main.py
 ```
 
 Sends 4 sample messages with 2-second intervals. Each message is a JSON object:
@@ -80,7 +79,7 @@ Sends 4 sample messages with 2-second intervals. Each message is a JSON object:
 docker compose up app
 ```
 
-The container runs `python consumer.py` by default. The Dockerfile installs `librdkafka-dev` as a build dependency for the Confluent client.
+The container runs `python main.py` by default. The Dockerfile installs `librdkafka-dev` as a build dependency for the Confluent client.
 
 ## Message Format
 
