@@ -6,3 +6,4 @@ build/
 frontend/frontend_readme.md
 frontend/.env
 frontend/.vite/
+__pycache__
