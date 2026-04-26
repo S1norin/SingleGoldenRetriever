@@ -7,3 +7,4 @@ frontend/frontend_readme.md
 frontend/.env
 frontend/.vite/
 __pycache__
+auth_server/users.txt
