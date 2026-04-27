@@ -119,7 +119,7 @@ async function subscribeToTopic() {
     renderTags();
     input.value = "";
 
-    const res = await fetch(`http://localhost:8001/auth/subscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`);
+    const res = await fetch(`http://localhost:8001/auth/subscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
     if (!res.ok) {
         const err = await res.json();
         alert(err.detail || "Failed to subscribe.");
@@ -143,7 +143,7 @@ async function unsubscribeFromTopic(tag) {
     currentTags = currentTags.filter(t => t !== tag);
     renderTags();
 
-    const res = await fetch(`http://localhost:8001/auth/unsubscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`);
+    const res = await fetch(`http://localhost:8001/auth/unsubscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
     if (!res.ok) {
         const err = await res.json();
         alert(err.detail || "Failed to unsubscribe.");
