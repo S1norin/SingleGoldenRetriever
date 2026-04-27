@@ -59,11 +59,9 @@ def authenticate(user: str):
 
 
 def save_users(users_db):
-    tmp_file = USERS_FILE + ".tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
         for u, tags in users_db.items():
             f.write(f"{u}:{','.join(tags)}\n")
-    os.replace(tmp_file, USERS_FILE)
 
 
 @app.put("/auth/subscribe")
