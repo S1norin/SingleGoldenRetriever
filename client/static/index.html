@@ -19,6 +19,10 @@
         <div class="sidebar left">
             <h3>My Subscribed Tags</h3>
             <ul id="tags-list"></ul>
+            <div class="subscribe-form">
+                <input type="text" id="subscribe-input" placeholder="New tag..." onkeydown="if(event.key==='Enter')subscribeToTopic()">
+                <button onclick="subscribeToTopic()">+</button>
+            </div>
         </div>
         
         <div class="main-chat">
