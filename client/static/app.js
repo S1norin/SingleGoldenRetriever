@@ -1,12 +1,13 @@
 let currentUser = null;
 let currentTags = [];
+let authServerUrl = "http://localhost:8001"
 
 async function login() {
     const username = document.getElementById("username-input").value.trim();
     if (!username) return;
 
     // Check auth against our new users.txt server
-    const authRes = await fetch(`http://localhost:8001/auth?user=${username}`);
+    const authRes = await fetch(`${authServerUrl}/auth?user=${username}`);
     if (!authRes.ok) {
         alert("Login failed: User not registered.");
         return;
@@ -105,7 +106,7 @@ function renderTags() {
 }
 
 async function refreshTags() {
-    const res = await fetch(`http://localhost:8001/auth?user=${currentUser}`);
+    const res = await fetch(`${authServerUrl}/auth?user=${currentUser}`);
     if (!res.ok) return;
     const data = await res.json();
     currentTags = data.tags;
@@ -121,7 +122,7 @@ async function subscribeToTopic() {
     renderTags();
     input.value = "";
 
-    const res = await fetch(`http://localhost:8001/auth/subscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
+    const res = await fetch(`${authServerUrl}/auth/subscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
     if (!res.ok) {
         const err = await res.json();
         alert(err.detail || "Failed to subscribe.");
@@ -145,7 +146,7 @@ async function unsubscribeFromTopic(tag) {
     currentTags = currentTags.filter(t => t !== tag);
     renderTags();
 
-    const res = await fetch(`http://localhost:8001/auth/unsubscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
+    const res = await fetch(`${authServerUrl}/auth/unsubscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`, { method: "PUT" });
     if (!res.ok) {
         const err = await res.json();
         alert(err.detail || "Failed to unsubscribe.");
