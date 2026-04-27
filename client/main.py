@@ -20,7 +20,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 MESSAGES_FILE = os.path.join(DATA_DIR, "messages.json")
 HEARTBEAT_FILE = os.path.join(DATA_DIR, "heartbeat.json")
 
-# Prevent Race Conditions!
+# Prevent Race Conditions
 file_lock = threading.Lock()
 
 with file_lock:
@@ -38,6 +38,9 @@ class HeartbeatPayload(BaseModel):
     user: str
 
 class SubscribePayload(BaseModel):
+    tags: list
+
+class UnsubscribePayload(BaseModel):
     tags: list
 
 def safe_topic(tag: str) -> str:
@@ -80,6 +83,18 @@ def update_subscription(payload: SubscribePayload):
     subscription_changed = True
     return {"status": "subscribed", "topics": active_topics}
 
+@app.post("/api/unsubscribe")
+def remove_subscription(payload: UnsubscribePayload):
+    global active_topics, subscription_changed
+    
+    topics_to_remove = [safe_topic(t) for t in payload.tags]
+    
+    # Filter out the requested topics, but always protect "Heartbeat"
+    active_topics = [t for t in active_topics if t not in topics_to_remove or t == "Heartbeat"]
+    subscription_changed = True
+    
+    return {"status": "unsubscribed", "topics": active_topics}
+
 @app.get("/api/messages")
 def get_messages(user: str = "", tags: str = ""):
     with file_lock:
@@ -89,7 +104,7 @@ def get_messages(user: str = "", tags: str = ""):
         except json.JSONDecodeError:
             msgs = []
 
-    # If the frontend passes a user and tags, filter the messages!
+    # If the frontend passes a user and tags, filter the messages
     if user and tags:
         # The tags this specific user is allowed to see
         user_tags = set([t.strip() for t in tags.split(",")])
@@ -108,7 +123,7 @@ def get_messages(user: str = "", tags: str = ""):
             # Rule 3: Do we share a specific tag? (e.g. we both have 'frontend')
             shares_tag = bool(user_tags & msg_tags)
             
-            # If any of these are true, the user is allowed to see it!
+            # If any of these are true, the user is allowed to see it
             if is_author or is_public or shares_tag:
                 filtered_msgs.append(m)
                 
@@ -178,7 +193,8 @@ def consumer_worker():
 
         elif topic != "General":
             if "message_flow" not in data: data["message_flow"] = []
-            data["message_flow"].append(f"Consumer_Saved_Local_From_Tag")
+            
+            data["message_flow"].append(f"Consumer received message from topic {topic}")
             
             with file_lock:
                 try:
