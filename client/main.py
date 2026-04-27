@@ -58,7 +58,7 @@ def send_message(payload: MessagePayload):
         "text": payload.text,
         "tags": payload.tags,
         "time_of_send": datetime.utcnow().isoformat(),
-        "message_flow": ["Producer_Sent", "Kafka_General_Received"]
+        "message_flow": ["Producer sent to general"] 
     }
     producer.produce("General", json.dumps(msg_data).encode("utf-8"))
     producer.flush()
