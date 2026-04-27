@@ -1,4 +1,5 @@
 import os
+import threading
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -12,6 +13,7 @@ app.add_middleware(
 )
 
 USERS_FILE = "users.txt"
+users_lock = threading.Lock()
 
 # Auto-create the file with defaults if it doesn't exist to prevent 500 errors
 if not os.path.exists(USERS_FILE):
@@ -66,40 +68,44 @@ def save_users(users_db):
 
 @app.put("/auth/subscribe")
 def add_subscription(user: str = Query(...), tag: str = Query(...)):
-    users_db = load_users()
-    if users_db is None:
-        raise HTTPException(
-            status_code=500, detail="Database error: Cannot read users.txt"
-        )
-    if user not in users_db:
-        raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
-    if tag in users_db[user]:
-        raise HTTPException(status_code=400, detail=f"Tag '{tag}' already subscribed.")
-    users_db[user].append(tag)
-    save_users(users_db)
-    return {"user": user, "tags": users_db[user]}
+    with users_lock:
+        users_db = load_users()
+        if users_db is None:
+            raise HTTPException(
+                status_code=500, detail="Database error: Cannot read users.txt"
+            )
+        if user not in users_db:
+            raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
+        if tag in users_db[user]:
+            raise HTTPException(
+                status_code=400, detail=f"Tag '{tag}' already subscribed."
+            )
+        users_db[user].append(tag)
+        save_users(users_db)
+        return {"user": user, "tags": users_db[user]}
 
 
 @app.put("/auth/unsubscribe")
 def remove_subscription(user: str = Query(...), tag: str = Query(...)):
-    users_db = load_users()
-    if users_db is None:
-        raise HTTPException(
-            status_code=500, detail="Database error: Cannot read users.txt"
-        )
-    if user not in users_db:
-        raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
-    if tag not in users_db[user]:
-        raise HTTPException(
-            status_code=400, detail=f"Tag '{tag}' not found in subscriptions."
-        )
-    if tag == "general":
-        raise HTTPException(
-            status_code=400, detail="Cannot unsubscribe from 'general' tag."
-        )
-    users_db[user].remove(tag)
-    save_users(users_db)
-    return {"user": user, "tags": users_db[user]}
+    with users_lock:
+        users_db = load_users()
+        if users_db is None:
+            raise HTTPException(
+                status_code=500, detail="Database error: Cannot read users.txt"
+            )
+        if user not in users_db:
+            raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
+        if tag not in users_db[user]:
+            raise HTTPException(
+                status_code=400, detail=f"Tag '{tag}' not found in subscriptions."
+            )
+        if tag == "general":
+            raise HTTPException(
+                status_code=400, detail="Cannot unsubscribe from 'general' tag."
+            )
+        users_db[user].remove(tag)
+        save_users(users_db)
+        return {"user": user, "tags": users_db[user]}
 
 
 if __name__ == "__main__":
