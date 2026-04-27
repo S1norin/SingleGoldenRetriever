@@ -61,7 +61,7 @@ function startPolling() {
         const messages = await res.json();
         
         const feed = document.getElementById("message-feed");
-        feed.innerHTML = messages.map(msg => {
+        feed.innerHTML = messages.reverse().map(msg => {
             const sendTime = new Date(msg.time_of_send).toLocaleTimeString();
             return `
             <div class="message">
