@@ -40,6 +40,8 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
       - "${AUTH_SERVER_EXTERNAL_PORT:-8001}:8000"
+    volumes:
+      - ./auth_server/users.txt:/app/users.txt
     networks:
       - app-network
 
