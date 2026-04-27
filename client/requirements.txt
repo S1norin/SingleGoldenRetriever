@@ -1,5 +1,4 @@
-confluent-kafka
 fastapi
 uvicorn
-python-dotenv
-pydantic-settings
+pydantic
+confluent-kafka

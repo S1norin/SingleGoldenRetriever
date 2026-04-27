@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -20,6 +20,7 @@ if not os.path.exists(USERS_FILE):
         f.write("Alice:general,frontend\n")
         f.write("Bob:general,Олег\n")
 
+
 def load_users():
     users_db = {}
     try:
@@ -29,7 +30,7 @@ def load_users():
                 # Skip empty lines or malformed lines without a colon
                 if not line or ":" not in line:
                     continue
-                
+
                 user, tags_str = line.split(":", 1)
                 # Split tags by comma, clean whitespace, and ignore empties
                 tags = [t.strip() for t in tags_str.split(",") if t.strip()]
@@ -39,17 +40,67 @@ def load_users():
         print(f"Error reading {USERS_FILE}: {e}")
         return None
 
+
 @app.get("/auth")
 def authenticate(user: str):
     users_db = load_users()
-    
+
     if users_db is None:
-        raise HTTPException(status_code=500, detail="Database error: Cannot read users.txt")
-        
+        raise HTTPException(
+            status_code=500, detail="Database error: Cannot read users.txt"
+        )
+
     if user in users_db:
         return {"user": user, "tags": users_db[user]}
     else:
-        raise HTTPException(status_code=401, detail="User is not registered in the system.")
+        raise HTTPException(
+            status_code=401, detail="User is not registered in the system."
+        )
+
+
+def save_users(users_db):
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        for u, tags in users_db.items():
+            f.write(f"{u}:{','.join(tags)}\n")
+
+
+@app.put("/auth/subscribe")
+def add_subscription(user: str = Query(...), tag: str = Query(...)):
+    users_db = load_users()
+    if users_db is None:
+        raise HTTPException(
+            status_code=500, detail="Database error: Cannot read users.txt"
+        )
+    if user not in users_db:
+        raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
+    if tag in users_db[user]:
+        raise HTTPException(status_code=400, detail=f"Tag '{tag}' already subscribed.")
+    users_db[user].append(tag)
+    save_users(users_db)
+    return {"user": user, "tags": users_db[user]}
+
+
+@app.put("/auth/unsubscribe")
+def remove_subscription(user: str = Query(...), tag: str = Query(...)):
+    users_db = load_users()
+    if users_db is None:
+        raise HTTPException(
+            status_code=500, detail="Database error: Cannot read users.txt"
+        )
+    if user not in users_db:
+        raise HTTPException(status_code=404, detail=f"User '{user}' not found.")
+    if tag not in users_db[user]:
+        raise HTTPException(
+            status_code=400, detail=f"Tag '{tag}' not found in subscriptions."
+        )
+    if tag == "general":
+        raise HTTPException(
+            status_code=400, detail="Cannot unsubscribe from 'general' tag."
+        )
+    users_db[user].remove(tag)
+    save_users(users_db)
+    return {"user": user, "tags": users_db[user]}
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

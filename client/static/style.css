@@ -4,6 +4,7 @@
     --fg: #fcfcfa;
     --border: #5b595c;
     --accent: #ffd866;
+    --muted: #888589;
 }
 
 body {
@@ -44,3 +45,53 @@ li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
 .message small { color: var(--accent); font-size: 0.8rem; }
 .composer { padding: 1rem; background: var(--panel); display: flex; gap: 0.5rem; }
 .composer input { flex: 1; margin: 0; }
+
+/* Subscribe form */
+.subscribe-form {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.subscribe-form input {
+    width: auto;
+    flex: 1;
+    margin: 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.subscribe-form button {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* Tag items with remove button */
+.tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.tag-item:hover {
+    background: rgba(255, 216, 102, 0.08);
+}
+
+.tag-remove {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+    transition: color 0.15s;
+    user-select: none;
+}
+
+.tag-remove:hover {
+    color: var(--accent);
+}
