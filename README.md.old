@@ -1,6 +1,6 @@
 # SingleGoldenRetriever
 
-A real-time messaging app that channels all messages through a **single Kafka topic** (`General`). A stream processor fans messages out to tag-specific topics, enabling client-side channel filtering.
+A real-time messaging app that channels all messages through a **single Kafka topic** (`General`) — no topic-per-channel overhead. A stream processor fans messages out to tag-specific topics, enabling client-side channel filtering.
 
 ## Architecture
 
@@ -10,28 +10,28 @@ A real-time messaging app that channels all messages through a **single Kafka to
 │ (HTML/JS) │ ◀────────────────────── │ (FastAPI +   │
 │ localhost │  GET /api/messages      │  Kafka)      │
 └──────────┘                          └──────┬───────┘
-                                              │ produce to "General"
-                                              ▼
-                                       ┌──────────────┐
-                                       │  Kafka       │
-                                       │  "General"   │
-                                       └──────┬───────┘
-                                              │
-                               ┌──────────────┼──────────────┐
-                               ▼              ▼              ▼
-                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-                       │ Stream       │ │ Client       │ │ (other       │
-                       │ Processor    │ │ Consumer     │ │ consumers)   │
-                       │              │ │ (main.py)    │ │              │
-                       └──────┬───────┘ └──────┬───────┘ └──────────────┘
-                              │                 │
-                              │ produces to     │ subscribes to
-                              │ tag_<hex>       │ tag_<hex> topics
-                              ▼                 │
-                       ┌──────────────┐         │
-                       │ Kafka        │◀────────┘
-                       │ tag_<hex>    │
-                       └──────────────┘
+                                             │ produce to "General"
+                                             ▼
+                                      ┌──────────────┐
+                                      │  Kafka       │
+                                      │  "General"   │
+                                      └──────┬───────┘
+                                             │
+                              ┌──────────────┼──────────────┐
+                              ▼              ▼              ▼
+                      ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                      │ Stream       │ │ Client       │ │ (other       │
+                      │ Processor    │ │ Consumer     │ │ consumers)   │
+                      │              │ │ (main.py)    │ │              │
+                      └──────┬───────┘ └──────┬───────┘ └──────────────┘
+                             │                 │
+                             │ produces to     │ subscribes to
+                             │ tag_<hex>       │ tag_<hex> topics
+                             ▼                 │
+                      ┌──────────────┐         │
+                      │ Kafka        │◀────────┘
+                      │ tag_<hex>    │
+                      └──────────────┘
 ```
 
 ### How it works
@@ -51,7 +51,7 @@ A real-time messaging app that channels all messages through a **single Kafka to
 - [x] Username authentication (no password — for demo purposes)
 - [x] Online/offline status of users (heartbeat-based presence)
 - [x] Visual message flow tracking (producer → topic → consumer)
-- [x] Thread-safe user management (threading.Lock)
+- [x] All via a simple web UI!
 
 ## Quick Start
 
@@ -104,18 +104,17 @@ All configuration lives in `.env` files or Docker Compose defaults.
 
 ```
 ├── auth_server/              # Authentication microservice
-│   ├── main.py               # FastAPI user registry + tag management
+│   ├── main.py               # FastAPI user registry
 │   ├── users.txt             # Static user→tags mapping
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   └── README.md             # Detailed auth server documentation
+│   └── requirements.txt
 ├── client/                   # API server + frontend + Kafka client
 │   ├── main.py               # FastAPI + Kafka producer/consumer
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── static/               # Vanilla HTML/CSS/JS frontend
-│   │   ├── index.html        # Auth screen + chat UI (3-panel layout)
-│   │   ├── app.js            # Client-side logic (login, send, poll, subscribe/unsubscribe)
+│   │   ├── index.html        # Auth screen + chat UI
+│   │   ├── app.js            # Client-side logic (login, send, poll)
 │   │   └── style.css         # Dark theme (Catppuccin-inspired)
 │   └── data/                 # Local JSON state (mounted as volume)
 │       ├── messages.json
@@ -123,8 +122,7 @@ All configuration lives in `.env` files or Docker Compose defaults.
 ├── stream_processor/         # Kafka message fan-out service
 │   ├── processor.py          # General → tag_<hex> router
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   └── README.md             # Detailed stream processor documentation
+│   └── requirements.txt
 ├── docker-compose.yml        # Orchestration (4 services)
 ├── .env.example
 └── README.md
