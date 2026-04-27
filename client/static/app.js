@@ -23,7 +23,7 @@ async function login() {
         body: JSON.stringify({ tags: currentTags })
     });
 
-    document.getElementById("tags-list").innerHTML = currentTags.map(tag => `<li>#${tag}</li>`).join("");
+    renderTags();
     document.getElementById("auth-screen").classList.remove("active");
     document.getElementById("chat-screen").classList.add("active");
 
@@ -94,4 +94,69 @@ function startPolling() {
             body: JSON.stringify({ user: currentUser })
         });
     }, 5000);
+}
+
+function renderTags() {
+    document.getElementById("tags-list").innerHTML = currentTags.map(tag =>
+        `<li class="tag-item">#${tag} <span class="tag-remove" onclick="unsubscribeFromTopic('${tag}')">&times;</span></li>`
+    ).join("");
+}
+
+async function refreshTags() {
+    const res = await fetch(`http://localhost:8001/auth?user=${currentUser}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    currentTags = data.tags;
+    renderTags();
+}
+
+async function subscribeToTopic() {
+    const input = document.getElementById("subscribe-input");
+    const tag = input.value.trim();
+    if (!tag || !currentUser) return;
+
+    currentTags.push(tag);
+    renderTags();
+    input.value = "";
+
+    const res = await fetch(`http://localhost:8001/auth/subscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`);
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "Failed to subscribe.");
+        currentTags.pop();
+        renderTags();
+        return;
+    }
+
+    await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags: [tag] })
+    });
+
+    await refreshTags();
+}
+
+async function unsubscribeFromTopic(tag) {
+    if (!currentUser) return;
+
+    currentTags = currentTags.filter(t => t !== tag);
+    renderTags();
+
+    const res = await fetch(`http://localhost:8001/auth/unsubscribe?user=${encodeURIComponent(currentUser)}&tag=${encodeURIComponent(tag)}`);
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "Failed to unsubscribe.");
+        currentTags.push(tag);
+        renderTags();
+        return;
+    }
+
+    await fetch("/api/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags: [tag] })
+    });
+
+    await refreshTags();
 }
