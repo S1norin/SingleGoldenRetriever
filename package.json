@@ -1,9 +1,0 @@
-{
-  "name": "single-golden-retriever-tests",
-  "private": true,
-  "type": "module",
-  "devDependencies": {
-    "vitest": "^3.0.0",
-    "jsdom": "^26.0.0"
-  }
-}
