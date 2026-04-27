@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     ports:
-      - "9092:9092"
+      # Controlled by .env file
+      - "${KAFKA_EXTERNAL_PORT:-9092}:9092"
     volumes:
       - kafka_data:/var/lib/kafka/data
     environment:
@@ -13,46 +12,61 @@ services:
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      
+      # FIX: Bind to 0.0.0.0 instead of the hostname 'kafka' to ensure bridge network connectivity
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      
+      # FIX: Advertise 'kafka' internally, and the variable port externally
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:${KAFKA_EXTERNAL_PORT:-9092}'
+      
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:29092", "--list"]
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - app-network
 
-  app:
-    build: ./app
-    container_name: chat-app
+  auth-server:
+    build: ./auth_server
+    container_name: auth-server
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "${AUTH_SERVER_EXTERNAL_PORT:-8001}:8000"
+    networks:
+      - app-network
+
+  stream-processor:
+    build: ./stream_processor
+    container_name: stream-processor
     depends_on:
       kafka:
         condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: 'kafka:29092'
-      CHAT_TOPIC: 'user-messages'
-    command: python consumer.py
+    networks:
+      - app-network
 
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_DEFAULT_USERNAME: "Daria"
-        VITE_SUBSCRIBED_TOPICS: "engineering,release_ops,product-updates"
-        VITE_ONLINE_USERS: "Ava,Noah,Lena,Mateo,Daria"
-        VITE_MOCK_MESSAGE_COUNT: "4"
-    container_name: frontend
+  client:
+    build: ./client
+    container_name: client
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
-      - "5173:80"
+      - "${CLIENT_EXTERNAL_PORT:-8080}:8000"
     depends_on:
-      - app
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: 'kafka:29092'
+    volumes:
+      - ./client/data:/app/data
     networks:
       - app-network
 
@@ -62,4 +76,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

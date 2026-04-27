@@ -1,32 +1,56 @@
 # SingleGoldenRetriever
 
-A real-time messaging app that channels all messages through a **single Kafka topic** — no topic-per-channel overhead, just one unified stream with client-side filtering.
+A real-time messaging app that channels all messages through a **single Kafka topic** (`General`) — no topic-per-channel overhead. A stream processor fans messages out to tag-specific topics, enabling client-side channel filtering.
 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
-│   Frontend    │────▶│   Kafka Broker   │────▶│ Consumer and Producer│
-│  (HTML/CSS/JS)│◀────│  (single topic)  │◀────│  (Python)    │
-│  localhost    │     │  user-messages   │     │  chat-app    │
-└──────────────┘     └──────────────────┘     └──────────────┘
+┌──────────┐     POST /api/send      ┌──────────────┐
+│  Browser  │ ──────────────────────▶ │   Client     │
+│ (HTML/JS) │ ◀────────────────────── │ (FastAPI +   │
+│ localhost │  GET /api/messages      │  Kafka)      │
+└──────────┘                          └──────┬───────┘
+                                             │ produce to "General"
+                                             ▼
+                                      ┌──────────────┐
+                                      │  Kafka       │
+                                      │  "General"   │
+                                      └──────┬───────┘
+                                             │
+                              ┌──────────────┼──────────────┐
+                              ▼              ▼              ▼
+                      ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                      │ Stream       │ │ Client       │ │ (other       │
+                      │ Processor    │ │ Consumer     │ │ consumers)   │
+                      │              │ │ (main.py)    │ │              │
+                      └──────┬───────┘ └──────┬───────┘ └──────────────┘
+                             │                 │
+                             │ produces to     │ subscribes to
+                             │ tag_<hex>       │ tag_<hex> topics
+                             ▼                 │
+                      ┌──────────────┐         │
+                      │ Kafka        │◀────────┘
+                      │ tag_<hex>    │
+                      └──────────────┘
 ```
 
 ### How it works
 
-1. **Frontend** sends messages as JSON to the single `user-messages` Kafka topic, tagging each with target topics (channels).
-2. **Consumer** (Python) reads messages from the topic and prints them to stdout — in a real deployment this would push to a WebSocket endpoint for live updates.
-3. **Frontend** displays messages in a live feed, filtered by the user's subscribed topics.
+1. **Browser** sends messages as JSON via `POST /api/send` to the **Client** service, tagging each message with channel tags.
+2. **Client** publishes messages to the `General` Kafka topic and serves the static frontend SPA.
+3. **Stream Processor** consumes from `General`, then fans each message out to tag-specific topics (e.g., `tag_6261636b656e64` for "backend") using hex-encoded topic names.
+4. **Client consumer** subscribes to the user's tag topics, persists messages to local JSON files, and serves them via `GET /api/messages`.
+5. **Auth Server** validates usernames against a static `users.txt` file and returns user tags for channel subscriptions.
 
-> **Note:** The frontend does not produce directly to Kafka in this demo — it simulates message production and displays messages from mock data. A real implementation would use a backend API to bridge the frontend and Kafka.
+> **Note:** The frontend polls REST endpoints for new messages and online status. In a production system, WebSocket push would replace polling.
 
 ## Features
 
-- [x] Sending messages to multiple channels (topics)
-- [x] Joining / leaving channels
-- [x] Username + password login (password required but not validated — for demo purposes)
-- [x] Online/offline status of users (mock presence)
-- [x] Visual message flow monitor (producer → topic → consumer)
+- [x] Sending messages to multiple channels (topics) via tags
+- [x] Joining / leaving channels (dynamic topic subscription)
+- [x] Username authentication (no password — for demo purposes)
+- [x] Online/offline status of users (heartbeat-based presence)
+- [x] Visual message flow tracking (producer → topic → consumer)
 - [x] All via a simple web UI!
 
 ## Quick Start
@@ -34,7 +58,6 @@ A real-time messaging app that channels all messages through a **single Kafka to
 ### Prerequisites
 
 - [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
-- Python 3.9+ (for local backend development)
 
 ### One-liner (Docker)
 
@@ -43,65 +66,64 @@ docker compose up -d
 ```
 
 This starts:
+
 | Service | Port | Description |
 |---|---|---|
 | `kafka` | 9092 | Kafka broker |
-| `app` | — | Python consumer |
-| `frontend` | — | Vanilla HTML/CSS/JS (served by nginx) |
+| `auth-server` | 8001 | Authentication microservice |
+| `client` | 8080 | API server + frontend + Kafka consumer/producer |
+| `stream-processor` | — | Message router (headless) |
 
-Open **http://localhost:8000** in your browser (local dev) or configure a port mapping in `docker-compose.yml`.
+Open **http://localhost:8080** in your browser.
 
 ### Local Development
 
 ```bash
-# 1. Start Kafka + consumer
-docker compose up kafka
+# 1. Start Kafka + all services
+docker compose up -d
 
-# 2. In another terminal, start the consumer
-cd app && python main.py
-
-# 3. In another terminal, start a local server for the frontend
-cd frontend && python -m http.server 8000
+# 2. (Optional) Run individual services locally:
+#    cd client && python -m uvicorn main:app --host 0.0.0.0 --port 8000
+#    cd auth_server && python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
-
-The frontend dev server runs on **http://localhost:8000**.
 
 ## Configuration
 
-All configuration lives in `.env` files or Docker build args.
+All configuration lives in `.env` files or Docker Compose defaults.
 
-### Root `.env` (backend)
-
-| Variable | Default | Description |
-|---|---|---|
-| `KAFKA_BOOTSTRAP_SERVERS` | `kafka:29092` | Kafka broker address |
-| `CHAT_TOPIC` | `user-messages` | Kafka topic name |
-| `GROUP_ID` | `chat-consumer-group` | Consumer group ID |
-| `LOG_LEVEL` | `INFO` | Logging level |
-
-### Frontend (see `frontend/.env`)
+### Root `.env` (backend + Docker)
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_DEFAULT_USERNAME` | `Maria` | Login placeholder |
-| `VITE_SUBSCRIBED_TOPICS` | `engineering,release_ops,product-updates` | Pre-subscribed topics |
-| `VITE_ONLINE_USERS` | `Ava,Noah,Lena,Mateo,Daria` | Mock online users |
-| `VITE_MOCK_MESSAGE_COUNT` | `4` | Initial messages count |
+| `KAFKA_BOOTSTRAP_SERVERS` | `kafka:29092` | Kafka broker address. Use `kafka:29092` inside Docker, `localhost:9092` locally |
+| `KAFKA_EXTERNAL_PORT` | `9092` | External port for Kafka broker (host:container mapping) |
+| `AUTH_SERVER_EXTERNAL_PORT` | `8001` | External port for auth-server service |
+| `CLIENT_EXTERNAL_PORT` | `8080` | External port for client service |
 
 ## Project Structure
 
 ```
-├── app/                    # Python backend
-│   ├── main.py             # Kafka consumer and producer
-│   ├── README.md
+├── auth_server/              # Authentication microservice
+│   ├── main.py               # FastAPI user registry
+│   ├── users.txt             # Static user→tags mapping
+│   ├── Dockerfile
+│   └── requirements.txt
+├── client/                   # API server + frontend + Kafka client
+│   ├── main.py               # FastAPI + Kafka producer/consumer
+│   ├── Dockerfile
 │   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/               # Vanilla HTML/CSS/JS
-│   ├── index.html          # Entry point
-│   ├── styles.css          # Design system (792 lines)
-│   ├── script.js           # State + rendering (940 lines)
-│   └── .env                # Frontend configuration
-├── docker-compose.yml      # Orchestration
+│   ├── static/               # Vanilla HTML/CSS/JS frontend
+│   │   ├── index.html        # Auth screen + chat UI
+│   │   ├── app.js            # Client-side logic (login, send, poll)
+│   │   └── style.css         # Dark theme (Catppuccin-inspired)
+│   └── data/                 # Local JSON state (mounted as volume)
+│       ├── messages.json
+│       └── heartbeat.json
+├── stream_processor/         # Kafka message fan-out service
+│   ├── processor.py          # General → tag_<hex> router
+│   ├── Dockerfile
+│   └── requirements.txt
+├── docker-compose.yml        # Orchestration (4 services)
 ├── .env.example
 └── README.md
 ```
