@@ -93,6 +93,10 @@ def remove_subscription(user: str = Query(...), tag: str = Query(...)):
         raise HTTPException(
             status_code=400, detail=f"Tag '{tag}' not found in subscriptions."
         )
+    if tag == "general":
+        raise HTTPException(
+            status_code=400, detail="Cannot unsubscribe from 'general' tag."
+        )
     users_db[user].remove(tag)
     save_users(users_db)
     return {"user": user, "tags": users_db[user]}

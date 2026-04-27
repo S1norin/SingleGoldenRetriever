@@ -98,7 +98,9 @@ function startPolling() {
 
 function renderTags() {
     document.getElementById("tags-list").innerHTML = currentTags.map(tag =>
-        `<li class="tag-item">#${tag} <span class="tag-remove" onclick="unsubscribeFromTopic('${tag}')">&times;</span></li>`
+        tag === "general"
+            ? `<li class="tag-item">#${tag}</li>`
+            : `<li class="tag-item">#${tag} <span class="tag-remove" onclick="unsubscribeFromTopic('${tag}')">&times;</span></li>`
     ).join("");
 }
 
