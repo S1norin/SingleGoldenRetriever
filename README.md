@@ -34,6 +34,8 @@ docker compose up -d
 ```
 Open **http://localhost:8080** in your browser.
 
+---
+
 This starts:
 
 | Service | Port | Description |
