@@ -2,38 +2,6 @@
 
 A real-time messaging app that channels all messages through a **single Kafka topic** (`General`). A stream processor fans messages out to tag-specific topics, enabling client-side channel filtering.
 
-## Architecture
-
-```
-┌──────────┐     POST /api/send      ┌──────────────┐
-│  Browser  │ ──────────────────────▶ │   Client     │
-│ (HTML/JS) │ ◀────────────────────── │ (FastAPI +   │
-│ localhost │  GET /api/messages      │  Kafka)      │
-└──────────┘                          └──────┬───────┘
-                                              │ produce to "General"
-                                              ▼
-                                       ┌──────────────┐
-                                       │  Kafka       │
-                                       │  "General"   │
-                                       └──────┬───────┘
-                                              │
-                               ┌──────────────┼──────────────┐
-                               ▼              ▼              ▼
-                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-                       │ Stream       │ │ Client       │ │ (other       │
-                       │ Processor    │ │ Consumer     │ │ consumers)   │
-                       │              │ │ (main.py)    │ │              │
-                       └──────┬───────┘ └──────┬───────┘ └──────────────┘
-                              │                 │
-                              │ produces to     │ subscribes to
-                              │ tag_<hex>       │ tag_<hex> topics
-                              ▼                 │
-                       ┌──────────────┐         │
-                       │ Kafka        │◀────────┘
-                       │ tag_<hex>    │
-                       └──────────────┘
-```
-
 ### How it works
 
 1. **Browser** sends messages as JSON via `POST /api/send` to the **Client** service, tagging each message with channel tags.
