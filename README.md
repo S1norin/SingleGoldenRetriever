@@ -27,11 +27,12 @@ A real-time messaging app that channels all messages through a **single Kafka to
 
 - [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
 
-### One-liner (Docker)
+### Docker
 
 ```bash
 docker compose up -d
 ```
+Open **http://localhost:8080** in your browser.
 
 This starts:
 
@@ -42,7 +43,6 @@ This starts:
 | `client` | 8080 | API server + frontend + Kafka consumer/producer |
 | `stream-processor` | — | Message router (headless) |
 
-Open **http://localhost:8080** in your browser.
 
 ### Local Development
 

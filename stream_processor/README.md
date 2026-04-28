@@ -28,33 +28,6 @@ The stream processor is the heart of the distributed messaging architecture. It 
 
 This allows clients to subscribe only to tags they care about, rather than receiving all messages.
 
-## Architecture
-
-```
-Browser → Client Service → Kafka "General" topic
-                                      ↓
-                            ┌─────────────────┐
-                            │ Stream Processor  │
-                            │ consumer.subscribe│
-                            │   ["General"]     │
-                            └────────┬──────────┘
-                                     │
-                                     │ produces to
-                                     ▼
-                            ┌─────────────────┐
-                            │ Kafka tag topics│
-                            │ tag_67656e657261 │
-                            │ tag_6261636b656e │
-                            │ tag_d09ed0bbd0b5 │
-                            └─────────────────┘
-                                     ↓
-                            ┌─────────────────┐
-                            │ Client Consumer  │
-                            │ subscribes to    │
-                            │ user's tags      │
-                            └─────────────────┘
-```
-
 ## How It Works
 
 ### 1. Consume
