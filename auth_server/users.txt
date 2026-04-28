@@ -1,0 +1,3 @@
+Nikita:general,Олег,ACLMT,backend
+Alice:general,frontend
+Bob:general,Олег

@@ -4,5 +4,4 @@ dist/
 node_modules/
 build/
 __pycache__
-auth_server/users.txt
 client/data
