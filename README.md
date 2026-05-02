@@ -34,6 +34,7 @@ docker compose up -d
 ```
 Open **http://localhost:8080** in your browser.
 
+Log in with either `Nikita`, `Alice` or `Bob`
 ---
 
 This starts:
